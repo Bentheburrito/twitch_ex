@@ -14,7 +14,8 @@ defmodule TwitchEx.MixProject do
   # Run "mix help compile.app" to learn about applications.
   def application do
     [
-      extra_applications: [:logger]
+      extra_applications: [:logger],
+      mod: {TwitchEx.Application, []}
     ]
   end
 
@@ -23,7 +24,9 @@ defmodule TwitchEx.MixProject do
     [
       {:tesla, "~> 1.4.0"},
       {:mint, "~> 1.0"},
-      {:castore, "~> 0.1"}
+      {:castore, "~> 0.1"},
+      {:plug_cowboy, "~> 2.0"},
+      {:jason, "~> 1.3"}
     ]
   end
 end
