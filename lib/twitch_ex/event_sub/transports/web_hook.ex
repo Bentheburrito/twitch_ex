@@ -1,16 +1,48 @@
-defmodule TwitchEx.EventSub.Transports.WebHook.VerifyEventPlug do
+defmodule TwitchEx.EventSub.Transports.WebHook do
   @moduledoc """
   Plug that responds with a 200 status code after verifying the given EventSub notification. Returns 402 if the
-  notification could not be verified.
+  notification could not be verified. Implements the `TwitchEx.EventSub.Transport` protocol.
 
   TODO:
   - Replay Attacks
   """
+  @behaviour TwitchEx.EventSub.Transport
+
   alias TwitchEx.EventSub
+  alias TwitchEx.EventSub.Subscription
 
   require Logger
 
   import Plug.Conn
+
+  @subscriptions_endpoint "https://api.twitch.tv/helix/eventsub/subscriptions"
+  @default_resp_body ""
+
+  ### Transport callbacks ###
+
+  def transport_map() do
+    %{
+      method: "webhook",
+      callback: Application.fetch_env!(:twitch_ex, :webhook_callback_url)
+    }
+  end
+
+  def subscribe(%Subscription{} = subscription) do
+    headers = [
+      {"Authorization", "Bearer #{subscription.access_token}"},
+      {"Client-Id", subscription.client_id},
+      {"Content-Type", "application/json"}
+    ]
+
+    subscription_body = Subscription.to_message(subscription)
+
+    case Tesla.post(@subscriptions_endpoint, subscription_body, headers: headers) do
+      {:ok, _} -> :ok
+      error -> error
+    end
+  end
+
+  ### Plug callbacks ###
 
   def init(%{secret: secret, notification_processor: notification_processor}) do
     {secret, notification_processor}
@@ -43,14 +75,11 @@ defmodule TwitchEx.EventSub.Transports.WebHook.VerifyEventPlug do
   defp handle_event(event, %{message_type: "notification"} = event_details, notif_processor) do
     notif_processor.(event, event_details)
 
-    ""
+    @default_resp_body
   end
 
-  defp handle_event(
-         %{"challenge" => challenge},
-         %{message_type: "webhook_callback_verification"},
-         _notif_processor
-       ) do
+  @webhook_callback "webhook_callback_verification"
+  defp handle_event(%{"challenge" => challenge}, %{message_type: @webhook_callback}, _) do
     challenge
   end
 
@@ -66,7 +95,7 @@ defmodule TwitchEx.EventSub.Transports.WebHook.VerifyEventPlug do
         Logger.warning("Notification Failure Exceeded revokation from Twitch")
     end
 
-    ""
+    @default_resp_body
   end
 
   defp parse_headers(req_headers) do

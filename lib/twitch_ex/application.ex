@@ -6,7 +6,7 @@ defmodule TwitchEx.Application do
       {Plug.Cowboy,
        scheme: :http,
        plug:
-         {TwitchEx.EventSub.Transports.WebHook.VerifyEventPlug,
+         {TwitchEx.EventSub.Transports.WebHook,
           %{
             secret: System.get_env("EVENTSUB_SECRET"),
             notification_processor: fn _event, _details -> IO.inspect("hey I got an event") end

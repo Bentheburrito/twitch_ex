@@ -3,6 +3,9 @@ defmodule TwitchEx.EventSub do
   API for interacting with Twitch's EventSub service.
   """
 
+  alias TwitchEx.EventSub
+  alias TwitchEx.EventSub.Subscription
+
   def verify_event(json_event, event_details, secret) do
     message = event_details.message_id <> event_details.message_timestamp <> json_event
 
@@ -14,5 +17,9 @@ defmodule TwitchEx.EventSub do
     else
       {:error, :signatures_not_equal}
     end
+  end
+
+  def subscribe(transport_module, %Subscription{} = subscription) do
+    transport_module.susbscribe(subscription)
   end
 end
