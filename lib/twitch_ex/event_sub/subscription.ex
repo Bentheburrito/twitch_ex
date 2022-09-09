@@ -1,35 +1,32 @@
 defmodule TwitchEx.EventSub.Subscription do
-  @enforce_keys [:access_token, :secret, :client_id, :type, :condition, :transport, :version]
+  @enforce_keys [:access_token, :client_id, :type, :condition, :transport, :version]
   defstruct @enforce_keys
 
   @type t() :: %__MODULE__{
           access_token: String.t(),
           client_id: String.t(),
           condition: map(),
-          secret: String.t(),
           transport: module(),
           type: String.t(),
-          version: integer()
+          version: String.t()
         }
 
   @spec new(
           access_token :: String.t(),
           client_id :: String.t(),
           condition :: map(),
-          secret :: String.t(),
           transport :: module(),
           type :: String.t(),
-          version :: integer()
+          version :: String.t()
         ) :: t()
-  def new(access_token, client_id, condition, secret, transport, type, version) do
+  def new(access_token, client_id, condition, transport, type, version) do
     %__MODULE__{
       access_token: access_token,
       client_id: client_id,
       condition: condition,
-      secret: secret,
       transport: transport,
       type: type,
-      version: version
+      version: to_string(version)
     }
   end
 
@@ -39,7 +36,6 @@ defmodule TwitchEx.EventSub.Subscription do
       attrs[:access_token],
       attrs[:client_id],
       attrs[:condition],
-      attrs[:secret],
       attrs[:type],
       attrs[:transport],
       attrs[:version]
@@ -49,7 +45,7 @@ defmodule TwitchEx.EventSub.Subscription do
   def to_message(%__MODULE__{} = subscription) do
     subscription
     |> Map.from_struct()
-    |> Map.update!(:transport, & &1.transport_map)
+    |> Map.update!(:transport, & &1.transport_spec)
     |> Jason.encode!()
   end
 end

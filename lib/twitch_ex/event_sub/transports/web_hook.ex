@@ -3,8 +3,7 @@ defmodule TwitchEx.EventSub.Transports.WebHook do
   Plug that responds with a 200 status code after verifying the given EventSub notification. Returns 402 if the
   notification could not be verified. Implements the `TwitchEx.EventSub.Transport` protocol.
 
-  TODO:
-  - Replay Attacks
+  TODO: deduping multiple notifications, replay attacks
   """
   @behaviour TwitchEx.EventSub.Transport
 
@@ -20,31 +19,79 @@ defmodule TwitchEx.EventSub.Transports.WebHook do
 
   ### Transport callbacks ###
 
-  def transport_map() do
-    %{
-      method: "webhook",
-      callback: Application.fetch_env!(:twitch_ex, :webhook_callback_url)
-    }
+  def transport_spec() do
+    Agent.get(__MODULE__, & &1)
+  end
+
+  def list_events(client_id, access_token) do
+    headers = [{"authorization", "Bearer #{access_token}"}, {"client-id", client_id}]
+
+    case Tesla.get(@subscriptions_endpoint, headers: headers) do
+      {:ok, %{status: status} = env} when status in 200..299 ->
+        {:ok, Jason.decode!(env.body)}
+
+      {:ok, env} ->
+        {:error, env.status}
+
+      error ->
+        error
+    end
   end
 
   def subscribe(%Subscription{} = subscription) do
     headers = [
-      {"Authorization", "Bearer #{subscription.access_token}"},
-      {"Client-Id", subscription.client_id},
-      {"Content-Type", "application/json"}
+      {"authorization", "Bearer #{subscription.access_token}"},
+      {"client-id", subscription.client_id},
+      {"content-type", "application/json"}
     ]
 
     subscription_body = Subscription.to_message(subscription)
 
     case Tesla.post(@subscriptions_endpoint, subscription_body, headers: headers) do
-      {:ok, _} -> :ok
-      error -> error
+      {:ok, %{status: status} = env} when status in 200..299 ->
+        {:ok, Jason.decode!(env.body)}
+
+      {:ok, env} ->
+        {:error, env.status}
+
+      error ->
+        error
+    end
+  end
+
+  def unsubscribe(subscription_id, client_id, access_token) do
+    headers = [{"authorization", "Bearer #{access_token}"}, {"client-id", client_id}]
+
+    case Tesla.delete(@subscriptions_endpoint <> "?id=#{subscription_id}", headers: headers) do
+      {:ok, %{status: status}} when status in 200..299 ->
+        :ok
+
+      {:ok, env} ->
+        {:error, env.status}
+
+      error ->
+        error
     end
   end
 
   ### Plug callbacks ###
 
-  def init(%{secret: secret, notification_processor: notification_processor}) do
+  def init(%{
+        secret: secret,
+        notification_processor: notification_processor,
+        callback_url: callback_url
+      }) do
+    Agent.start_link(
+      fn ->
+        %{
+          method: "webhook",
+          callback: callback_url,
+          secret: secret
+        }
+      end,
+      name: __MODULE__
+    )
+
     {secret, notification_processor}
   end
 
@@ -92,7 +139,7 @@ defmodule TwitchEx.EventSub.Transports.WebHook do
         nil
 
       %{"status" => "notification_failures_exceeded"} ->
-        Logger.warning("Notification Failure Exceeded revokation from Twitch")
+        Logger.warning("Notification Failure Exceeded revocation from Twitch")
     end
 
     @default_resp_body

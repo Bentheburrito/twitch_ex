@@ -3,7 +3,6 @@ defmodule TwitchEx.EventSub do
   API for interacting with Twitch's EventSub service.
   """
 
-  alias TwitchEx.EventSub
   alias TwitchEx.EventSub.Subscription
 
   def verify_event(json_event, event_details, secret) do
@@ -19,7 +18,20 @@ defmodule TwitchEx.EventSub do
     end
   end
 
+  @doc """
+  List events the given client is subscribed to.
+
+  TODO: Filtering, pagination
+  """
+  def list_events(transport_module, client_id, access_token) do
+    transport_module.list_events(client_id, access_token)
+  end
+
   def subscribe(transport_module, %Subscription{} = subscription) do
-    transport_module.susbscribe(subscription)
+    transport_module.subscribe(subscription)
+  end
+
+  def unsubscribe(transport_module, subscription_id, client_id, access_token) do
+    transport_module.unsubscribe(subscription_id, client_id, access_token)
   end
 end

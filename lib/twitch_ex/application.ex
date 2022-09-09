@@ -8,8 +8,11 @@ defmodule TwitchEx.Application do
        plug:
          {TwitchEx.EventSub.Transports.WebHook,
           %{
+            callback_url: "https://3dc0-98-97-56-158.ngrok.io",
             secret: System.get_env("EVENTSUB_SECRET"),
-            notification_processor: fn _event, _details -> IO.inspect("hey I got an event") end
+            notification_processor: fn event, details ->
+              IO.inspect(%{event: event, details: details}, label: "hey I got an event")
+            end
           }},
        options: [port: 8080]}
     ]
