@@ -9,6 +9,7 @@ defmodule TwitchEx.EventSub.Transports.WebHook do
 
   alias TwitchEx.EventSub
   alias TwitchEx.EventSub.Subscription
+  alias TwitchEx.OAuth
 
   require Logger
 
@@ -50,6 +51,30 @@ defmodule TwitchEx.EventSub.Transports.WebHook do
     case Tesla.post(@subscriptions_endpoint, subscription_body, headers: headers) do
       {:ok, %{status: status} = env} when status in 200..299 ->
         {:ok, Jason.decode!(env.body)}
+
+      {:ok, %{status: 403}} ->
+        auth_url = OAuth.simple_authorize_url(subscription.client_id, "SCOPES_HERE")
+
+        Logger.warning("""
+        \nTried to subscribe to type `#{subscription.type}`,
+        but this client (#{subscription.client_id}) isn't authorized.
+
+        You can fix this in two ways:
+
+          1) Tell the user to visit the following link and authorize your client, replacing SCOPES_HERE
+          with the required scopes for #{subscription.type}: #{auth_url}
+          You can find which scopes are required in the Twitch Event List:
+          https://dev.twitch.tv/docs/eventsub/eventsub-subscription-types
+
+
+          2) If you actually need a user code/token (you shouldn't unless using Twitch APIs besides EventSub),
+          follow the Twitch OAuth docs with the help of the `TwitchEx.OAuth` functions:
+          https://dev.twitch.tv/docs/authentication/getting-tokens-oauth/
+
+
+        """)
+
+        {:error, 403}
 
       {:ok, env} ->
         {:error, env.status}
@@ -96,7 +121,9 @@ defmodule TwitchEx.EventSub.Transports.WebHook do
   end
 
   def init(_) do
-    raise("Please provide a map of options with a `:secret` and an `:notification_processor`.")
+    raise(
+      "Please provide a map of options with a `:secret`, a `:callback_url`, and a `:notification_processor`."
+    )
   end
 
   def call(conn, {secret, notification_processor}) do
