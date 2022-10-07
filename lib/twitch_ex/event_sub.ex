@@ -1,6 +1,40 @@
 defmodule TwitchEx.EventSub do
   @moduledoc """
   API for interacting with Twitch's EventSub service.
+
+  Most functions take a `transport_module` argument, which must be a Module that implements the
+  `TwitchEx.EventSub.Transport` behaviour. TwitchEx provides a Plug-based webhook transport out-of-the-box,
+  `TwitchEx.EventSub.Transports.WebHook`. To use it, you should include it in your application supervision tree. For
+  example:
+
+  ```elixir
+  defmodule MyApp.Application do
+    use Application
+
+    def start(_type, _args) do
+      children = [
+        {Plug.Cowboy,
+        scheme: :http,
+        plug:
+          {TwitchEx.EventSub.Transports.WebHook,
+            %{
+              callback_url: "CALLBACK_URL_HERE",
+              secret: CLIENT_SECRET_HERE,
+              notification_processor: fn event, _details ->
+                IO.inspect(event, label: "Event Received")
+              end
+            }},
+        options: [port: 8080]}
+      ]
+
+      opts = [strategy: :one_for_one, name: MyApp.Supervisor]
+
+      Supervisor.start_link(children, opts)
+    end
+  end
+  ```
+
+  Please see the `Webhook` documentation for more information on the configuration map.
   """
 
   alias TwitchEx.EventSub.Subscription

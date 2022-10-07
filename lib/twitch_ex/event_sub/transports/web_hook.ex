@@ -3,6 +3,24 @@ defmodule TwitchEx.EventSub.Transports.WebHook do
   Plug that responds with a 200 status code after verifying the given EventSub notification. Returns 402 if the
   notification could not be verified. Implements the `TwitchEx.EventSub.Transport` protocol.
 
+  There are three configuration parameters required, in the form of an atom-keyed map:
+  - `:callback_url` The URL that Twitch should post notifications, challenges, and other messages to. Note that Twitch
+  requires the callback URL to use HTTPS.
+  - `:secret` Your app's client secret.
+  - `:notification_processor` This function will receive EventSub notifications, and their HTTP headers.
+
+  For example:
+  ```elixir
+  %{
+    callback_url: "https://myapp.com/twitch/eventsub",
+    secret: "abcdefg...",
+    notification_processor: fn event, details ->
+      IO.inspect(details, label: "Event Headers")
+      IO.inspect(event, label: "Event Payload")
+    end
+  }
+  ```
+
   TODO: deduping multiple notifications, replay attacks
   """
   @behaviour TwitchEx.EventSub.Transport
@@ -70,8 +88,6 @@ defmodule TwitchEx.EventSub.Transports.WebHook do
           2) If you actually need a user code/token (you shouldn't unless using Twitch APIs besides EventSub),
           follow the Twitch OAuth docs with the help of the `TwitchEx.OAuth` functions:
           https://dev.twitch.tv/docs/authentication/getting-tokens-oauth/
-
-
         """)
 
         {:error, 403}

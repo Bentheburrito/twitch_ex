@@ -1,18 +1,8 @@
 defmodule TwitchEx do
   @moduledoc """
-  Documentation for `TwitchEx`.
+  Interact with various Twitch.TV APIs
+
+  Currently supported APIs
+  - EventSub (TwitchEx.EventSub)
   """
-
-  @doc """
-  Hello world.
-
-  ## Examples
-
-      iex> TwitchEx.hello()
-      :world
-
-  """
-  def hello do
-    :world
-  end
 end

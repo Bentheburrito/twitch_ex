@@ -49,6 +49,11 @@ defmodule TwitchEx.OAuth do
     end
   end
 
+  @doc """
+  Generates an authorization URL that simply redirects to twitch.tv. You should only use this function when you don't
+  need the auth code to complete the [Authorization Code Grant Flow](https://dev.twitch.tv/docs/authentication/getting-tokens-oauth/#authorization-code-grant-flow).
+  Otherwise, you should use `authorization_url/4`.
+  """
   def simple_authorize_url(client_id, scopes) do
     scopes = URI.encode(scopes)
 
@@ -62,8 +67,11 @@ defmodule TwitchEx.OAuth do
     @authorize_url <> "?" <> URI.encode_query(params)
   end
 
-  ### AUTHORIZATION CODE GRANT FLOW ###
-  def authorize_url(state, client_id, redirect_uri, scopes) do
+  @doc """
+  Generates an authorization URL that the user visits to grant your app certain scopes. You must implement the callback
+  at `redirect_uri` that collects the returned code and retrieves the actual oauth token.
+  """
+  def authorization_url(state, client_id, redirect_uri, scopes) do
     scopes = URI.encode(scopes)
 
     params = %{
@@ -76,77 +84,4 @@ defmodule TwitchEx.OAuth do
 
     @authorize_url <> "?" <> URI.encode_query(params)
   end
-
-  # def start_auth_code_grant_flow(client_id, redirect_uri, scopes \\ "channel:read:redemptions") do
-  #   state = gen_state()
-  #   auth_url = authorize_url(state, client_id, redirect_uri, scopes)
-  #   task = Task.start(&listen_for_auth_code(state))
-  #   auth_url
-  # end
-
-  # defp listen_for_auth_code(state) do
-  # end
-  ### END AUTHORIZATION CODE GRANT FLOW ###
-
-  # def get_access_token(auth_code) do
-  #   body =
-  #     %{
-  #       client_id: System.get_env("DISCORD_CLIENT_ID"),
-  #       client_secret: System.get_env("DISCORD_CLIENT_SECRET"),
-  #       grant_type: "authorization_code",
-  #       code: auth_code,
-  #       redirect_uri: System.get_env("OAUTH_REDIRECT_URI")
-  #     }
-  #     |> URI.encode_query()
-
-  #   headers = [{"Content-Type", "application/x-www-form-urlencoded"}]
-
-  #   case HTTPoison.post(@token_url, body, headers) do
-  #     {:ok, %HTTPoison.Response{body: token_body}} ->
-  #       {:ok, Jason.decode!(token_body)}
-
-  #     {:error, error} ->
-  #       Logger.error("Error getting access token: #{inspect(error)}")
-  #       {:error, error}
-  #   end
-  # end
-
-  # def refresh_access_token(refresh_token) do
-  #   body =
-  #     %{
-  #       client_id: System.get_env("DISCORD_CLIENT_ID"),
-  #       client_secret: System.get_env("DISCORD_CLIENT_SECRET"),
-  #       grant_type: "refresh_token",
-  #       refresh_token: refresh_token
-  #     }
-  #     |> URI.encode_query()
-
-  #   headers = [{"Content-Type", "application/x-www-form-urlencoded"}]
-
-  #   case HTTPoison.post(@token_url, body, headers) do
-  #     {:ok, %HTTPoison.Response{body: token_body}} ->
-  #       {:ok, Jason.decode!(token_body)}
-
-  #     {:error, error} ->
-  #       Logger.error("Error getting access token: #{inspect(error)}")
-  #       {:error, error}
-  #   end
-  # end
-
-  # def revoke_token(token) do
-  #   body =
-  #     %{
-  #       token: token
-  #     }
-  #     |> URI.encode_query()
-
-  #   case HTTPoison.post(@revoke_url, body) do
-  #     {:ok, %HTTPoison.Response{body: token_body}} ->
-  #       {:ok, Jason.decode!(token_body)}
-
-  #     {:error, error} ->
-  #       Logger.error("Error getting access token: #{inspect(error)}")
-  #       {:error, error}
-  #   end
-  # end
 end
