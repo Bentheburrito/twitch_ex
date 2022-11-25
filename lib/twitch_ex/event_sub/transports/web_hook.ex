@@ -57,6 +57,7 @@ defmodule TwitchEx.EventSub.Transports.WebHook do
     end
   end
 
+  @spec subscribe(Subscription.t()) :: {:ok, body :: map()} | {:error, reason :: String.t()}
   def subscribe(%Subscription{} = subscription) do
     headers = [
       {"authorization", "Bearer #{subscription.access_token}"},
@@ -70,7 +71,7 @@ defmodule TwitchEx.EventSub.Transports.WebHook do
       {:ok, %{status: status} = env} when status in 200..299 ->
         {:ok, Jason.decode!(env.body)}
 
-      {:ok, %{status: 403}} ->
+      {:ok, %{status: 403} = env} ->
         auth_url = OAuth.simple_authorize_url(subscription.client_id, "SCOPES_HERE")
 
         Logger.warning("""
@@ -85,15 +86,15 @@ defmodule TwitchEx.EventSub.Transports.WebHook do
           https://dev.twitch.tv/docs/eventsub/eventsub-subscription-types
 
 
-          2) If you actually need a user code/token (you shouldn't unless using Twitch APIs besides EventSub),
-          follow the Twitch OAuth docs with the help of the `TwitchEx.OAuth` functions:
+          2) If you actually need a user code/token (you shouldn't unless you're using Twitch APIs
+          besides EventSub), follow the Twitch OAuth docs with the help of the `TwitchEx.OAuth` functions:
           https://dev.twitch.tv/docs/authentication/getting-tokens-oauth/
         """)
 
-        {:error, 403}
+        {:error, "HTTP Status: 403, body: #{inspect(env.body)}"}
 
       {:ok, env} ->
-        {:error, env.status}
+        {:error, "HTTP Status: #{env.status}, body: #{inspect(env.body)}"}
 
       error ->
         error
